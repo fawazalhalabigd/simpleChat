@@ -70,6 +70,7 @@
     .msg-body {
       font-size: 1rem;
       word-break: break-word;
+      white-space: pre-wrap;
     }
 
     form {
@@ -89,7 +90,7 @@
     }
 
     /* Standardized Touch Targets for Mobile */
-    input, select, button {
+    input, select, button, textarea {
       padding: 12px;
       font-size: 1rem;
       border: 1px solid #ccc;
@@ -98,7 +99,13 @@
       outline: none;
     }
 
-    input:focus, select:focus {
+    textarea {
+      font-family: inherit;
+      resize: vertical;
+      min-height: 65px;
+    }
+
+    input:focus, select:focus, textarea:focus {
       border-color: #2563eb;
     }
 
@@ -125,21 +132,7 @@
       margin-bottom: 10px;
       display: none;
     }
-textarea {
-  padding: 12px;
-  font-size: 1rem;
-  font-family: inherit;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  width: 100%;
-  resize: vertical;
-  min-height: 60px;
-  outline: none;
-}
 
-textarea:focus {
-  border-color: #2563eb;
-}
     /* Tablet & Desktop Layout Enhancements */
     @media (min-width: 500px) {
       body { padding: 30px 15px; }
@@ -178,20 +171,46 @@ textarea:focus {
       <!-- Password input -->
       <input type="password" id="password" placeholder="Password" required>
     </div>
-  <div class="row">
-    <textarea id="text" placeholder="Type a message..." rows="2" required autocomplete="off"></textarea>
-    
-  </div>
-  <button type="submit">Send</button>
+
+    <div class="row">
+      <textarea id="text" placeholder="Type a message..." rows="2" required autocomplete="off"></textarea>
+    </div>
+
+    <button type="submit">Send</button>
   </form>
 
   <script>
     const chatBox = document.getElementById('chat-box');
     const form = document.getElementById('msg-form');
     const errorDiv = document.getElementById('error');
+    const textInput = document.getElementById('text');
 
     // Auto-scroll chat to bottom on initial render
     chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Notification permission request
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    let lastMessageCount = <%= messages.length %>;
+    let initialLoad = true;
+
+    function showNotification(sender, text) {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(`New message from ${sender}`, {
+          body: text
+        });
+      }
+    }
+
+    // Submit on Enter, multi-line on Shift + Enter
+    textInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -199,7 +218,7 @@ textarea:focus {
 
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
-      const text = document.getElementById('text').value;
+      const text = textInput.value;
 
       const res = await fetch('/api/messages', {
         method: 'POST',
@@ -215,7 +234,7 @@ textarea:focus {
         return;
       }
 
-      document.getElementById('text').value = '';
+      textInput.value = '';
       await fetchMessages();
       chatBox.scrollTop = chatBox.scrollHeight;
     });
@@ -223,7 +242,19 @@ textarea:focus {
     async function fetchMessages() {
       const res = await fetch('/api/messages');
       const messages = await res.json();
-      
+      const currentUser = document.getElementById('username').value;
+
+      // Trigger desktop notification if a new message arrives from another user
+      if (!initialLoad && messages.length > lastMessageCount) {
+        const latestMsg = messages[messages.length - 1];
+        if (latestMsg.username !== currentUser) {
+          showNotification(latestMsg.username, latestMsg.text);
+        }
+      }
+
+      lastMessageCount = messages.length;
+      initialLoad = false;
+
       // Save scroll state before DOM update
       const isAtBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 50;
 
