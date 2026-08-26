@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Service 1: API (api.0developer.com)
+  api_service:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: 0dev_simpleChat
+    restart: unless-stopped
+    environment:
+      - DB_PASSWORD=Fawaz123456#
+      - DB_NAME=0developer_db_simpleChat
+      - DB_USER=0developer_db_simpleChat
+    ports:
+      - "4005:4005" # Exposes host port 3002 -> container port 3000
+
+  # Service 2: Dashboard App (app.0developer.com)
+  #app_service:
+  #  build:
+  #    context: ./app
+  #    dockerfile: Dockerfile
+  #  container_name: 0dev_app
+  #  restart: unless-stopped
+  #  ports:
+  #    - "3003:3000" # Exposes host port 3003 -> container port 3000
+
+  # Shared Database
+  db:
+    image: mysql:8.0
+    container_name: 0developer_db_simpleChat
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=Fawaz123456#
+      - MYSQL_DATABASE=0developer_db_simpleChat
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "4006:4006"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+  db_data:ies: 10

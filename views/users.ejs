@@ -17,7 +17,8 @@
 
   <div class="form-box">
     <h3><%= editUser ? 'Edit User' : 'Add New User' %></h3>
-    <form action="<%= editUser ? '/api/users/update/' + editUser.id : '/api/users' %>" method="POST">
+    <!-- FIX: Points to /users/update/:id OR /users/create -->
+    <form action="<%= editUser ? '/users/update/' + editUser.id : '/users/create' %>" method="POST">
       <input type="text" name="name" placeholder="Name" value="<%= editUser ? editUser.name : '' %>" required>
       <input type="email" name="email" placeholder="Email" value="<%= editUser ? editUser.email : '' %>" required>
       <input type="text" name="password" placeholder="Password" value="<%= editUser ? editUser.password : '' %>" required>
@@ -46,7 +47,8 @@
           <td><%= u.password %></td>
           <td>
             <a href="/users/edit/<%= u.id %>">Edit</a>
-            <form action="/api/users/delete/<%= u.id %>" method="POST" class="inline-btn" onsubmit="return confirm('Delete user?')">
+            <!-- FIX: Points to /users/delete/:id without /api -->
+            <form action="/users/delete/<%= u.id %>" method="POST" class="inline-btn" onsubmit="return confirm('Delete user?')">
               <button type="submit">Delete</button>
             </form>
           </td>
