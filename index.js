@@ -1,23 +1,22 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-
-const app = express();
-const PORT = 4005;
-
-const data = require('./db.js');
-
 const session = require("express-session");
 const bodyParser = require("body-parser");
 const cors = require('cors');
-const cookieParser = require('cookie-parser'); // 1. Added cookie-parser
+const cookieParser = require('cookie-parser');
+
+const app = express();
+const PORT = process.env.PORT || 4005;
+
+const data = require('./db.js');
 
 // --- Middleware Setup ---
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); // 2. MUST be placed before verifyUser and checkAuthStatus
+app.use(cookieParser());
 
 app.use(
   session({
@@ -27,11 +26,6 @@ app.use(
   })
 );
 
-// --- Custom Middleware & Routes ---
-const { verifyUser, requireAuth, checkAuthStatus } = require("./routes/middleware/auth");
-
-app.use(verifyUser);
-app.use(checkAuthStatus);
 
 // Static & View Engine
 app.engine('txt', (filePath, options, callback) => {
@@ -45,17 +39,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Routes
+// --- Mounted Routes ---
 app.use('/', require('./routes/homePage.js'));
-// app.use('/', require('./routes/products.js')); 
+app.use('/users', require('./routes/users.js'));
+app.use('/api/messages', require('./routes/messages.js'));
+
+// 404 Handler
 app.use((req, res, next) => {
-  res.status(404).render('auth/error', { 
-    message: 'Page Not Found',
-    url: req.originalUrl 
-  });
+  res.status(404).send('Page Not Found');
 });
+
 // Server Start
 app.listen(PORT, async () => {
-  await data.first();
+  if (data.first) await data.first();
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

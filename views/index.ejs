@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Authenticated Chat</title>
+  <style>
+    body { font-family: sans-serif; max-width: 650px; margin: 30px auto; }
+    #chat-box { height: 350px; overflow-y: auto; border: 1px solid #ccc; padding: 12px; margin-bottom: 15px; }
+    .msg-card { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    form { display: flex; flex-direction: column; gap: 10px; }
+    .row { display: flex; gap: 10px; }
+    input, select { padding: 8px; flex: 1; }
+    .error-msg { color: #dc2626; font-weight: bold; font-size: 0.9rem; display: none; }
+  </style>
+</head>
+<body>
+  <h2>Global Chat</h2>
+
+  <div id="chat-box">
+    <% messages.forEach(msg => { %>
+      <div class="msg-card">
+        <div><strong><%= msg.username %>:</strong> <%= msg.text %></div>
+        <div>
+          <button onclick="editMsg('<%= msg.id %>', '<%= msg.text %>')">Edit</button>
+          <button onclick="deleteMsg('<%= msg.id %>')">Delete</button>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <div id="error" class="error-msg"></div>
+
+  <form id="msg-form">
+    <div class="row">
+      <!-- Select registered user -->
+      <select id="username" required>
+        <option value="">-- Select Registered User --</option>
+        <% users.forEach(user => { %>
+          <option value="<%= user.name %>"><%= user.name %></option>
+        <% }) %>
+      </select>
+
+      <!-- Password input -->
+      <input type="password" id="password" placeholder="Enter Password" required>
+    </div>
+
+    <div class="row">
+      <input type="text" id="text" placeholder="Type a message..." required autocomplete="off">
+      <button type="submit">Send</button>
+    </div>
+  </form>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const form = document.getElementById('msg-form');
+    const errorDiv = document.getElementById('error');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const text = document.getElementById('text').value;
+
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, text })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        errorDiv.innerText = data.error || 'Failed to send message.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      document.getElementById('text').value = '';
+      fetchMessages();
+    });
+
+    async function fetchMessages() {
+      const res = await fetch('/api/messages');
+      const messages = await res.json();
+      
+      chatBox.innerHTML = messages.map(m => `
+        <div class="msg-card">
+          <div><strong>${m.username}:</strong> ${m.text}</div>
+          <div>
+            <button onclick="editMsg('${m.id}', '${m.text}')">Edit</button>
+            <button onclick="deleteMsg('${m.id}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function editMsg(id, oldText) {
+      const newText = prompt('Edit:', oldText);
+      if (!newText) return;
+      await fetch('/api/messages/update/' + id, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newText })
+      });
+      fetchMessages();
+    }
+
+    async function deleteMsg(id) {
+      if (!confirm('Delete message?')) return;
+      await fetch('/api/messages/delete/' + id, { method: 'POST' });
+      fetchMessages();
+    }
+
+    setInterval(fetchMessages, 5000);
+  </script>
+</body>
+</html>
