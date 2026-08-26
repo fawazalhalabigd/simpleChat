@@ -2,15 +2,136 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Authenticated Chat</title>
   <style>
-    body { font-family: sans-serif; max-width: 650px; margin: 30px auto; }
-    #chat-box { height: 350px; overflow-y: auto; border: 1px solid #ccc; padding: 12px; margin-bottom: 15px; }
-    .msg-card { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    form { display: flex; flex-direction: column; gap: 10px; }
-    .row { display: flex; gap: 10px; }
-    input, select { padding: 8px; flex: 1; }
-    .error-msg { color: #dc2626; font-weight: bold; font-size: 0.9rem; display: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      padding: 12px;
+      max-width: 650px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    h2 {
+      text-align: center;
+      margin: 10px 0 15px;
+      font-size: 1.5rem;
+    }
+
+    #chat-box {
+      flex: 1;
+      height: 60vh;
+      min-height: 300px;
+      max-height: 500px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+      margin-bottom: 15px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .msg-card {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .msg-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .msg-user {
+      font-weight: bold;
+      color: #2563eb;
+      font-size: 0.95rem;
+    }
+
+    .msg-time {
+      font-size: 0.75rem;
+      color: #6b7280;
+      background: none;
+    }
+
+    .msg-body {
+      font-size: 1rem;
+      word-break: break-word;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+
+    .row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Standardized Touch Targets for Mobile */
+    input, select, button {
+      padding: 12px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 100%;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: #2563eb;
+    }
+
+    button[type="submit"] {
+      background-color: #2563eb;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button[type="submit"]:active {
+      background-color: #1d4ed8;
+    }
+
+    .error-msg {
+      color: #dc2626;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    /* Tablet & Desktop Layout Enhancements */
+    @media (min-width: 500px) {
+      body { padding: 30px 15px; }
+      .row { flex-direction: row; }
+      .msg-card { flex-direction: row; justify-content: space-between; align-items: baseline; }
+    }
   </style>
 </head>
 <body>
@@ -19,11 +140,11 @@
   <div id="chat-box">
     <% messages.forEach(msg => { %>
       <div class="msg-card">
-        <div><strong><%= msg.username %>:</strong> <%= msg.text %></div>
         <div>
-          <button onclick="editMsg('<%= msg.id %>', '<%= msg.text %>')">Edit</button>
-          <button onclick="deleteMsg('<%= msg.id %>')">Delete</button>
+          <span class="msg-user"><%= msg.username %>:</span> 
+          <span class="msg-body"><%= msg.text %></span>
         </div>
+        <code class="msg-time"><%= new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></code>
       </div>
     <% }) %>
   </div>
@@ -34,14 +155,14 @@
     <div class="row">
       <!-- Select registered user -->
       <select id="username" required>
-        <option value="">-- Select Registered User --</option>
+        <option value="">-- Select User --</option>
         <% users.forEach(user => { %>
           <option value="<%= user.name %>"><%= user.name %></option>
         <% }) %>
       </select>
 
       <!-- Password input -->
-      <input type="password" id="password" placeholder="Enter Password" required>
+      <input type="password" id="password" placeholder="Password" required>
     </div>
 
     <div class="row">
@@ -54,6 +175,9 @@
     const chatBox = document.getElementById('chat-box');
     const form = document.getElementById('msg-form');
     const errorDiv = document.getElementById('error');
+
+    // Auto-scroll chat to bottom on initial render
+    chatBox.scrollTop = chatBox.scrollHeight;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -78,22 +202,31 @@
       }
 
       document.getElementById('text').value = '';
-      fetchMessages();
+      await fetchMessages();
+      chatBox.scrollTop = chatBox.scrollHeight;
     });
 
     async function fetchMessages() {
       const res = await fetch('/api/messages');
       const messages = await res.json();
       
+      // Save scroll state before DOM update
+      const isAtBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 50;
+
       chatBox.innerHTML = messages.map(m => `
         <div class="msg-card">
-          <div><strong>${m.username}:</strong> ${m.text}</div>
           <div>
-            <button onclick="editMsg('${m.id}', '${m.text}')">Edit</button>
-            <button onclick="deleteMsg('${m.id}')">Delete</button>
+            <span class="msg-user">${m.username}:</span> 
+            <span class="msg-body">${m.text}</span>
           </div>
+          <code class="msg-time">${new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</code>
         </div>
       `).join('');
+
+      // Auto-scroll only if user is already at the bottom
+      if (isAtBottom) {
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
     }
 
     async function editMsg(id, oldText) {
