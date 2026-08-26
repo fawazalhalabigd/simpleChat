@@ -16,7 +16,7 @@ router.get('/getUpdated/massages', async (req, res) => {
   try {
     const query = `
       SELECT * FROM messages 
-      WHERE created_at >= NOW() - INTERVAL 10 MINUTE 
+      WHERE created_at >= NOW() - INTERVAL 1 MINUTE 
       ORDER BY created_at ASC
     `;
     const [messages] = await db.query(query);
