@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Management</title>
+  <style>
+    body { font-family: sans-serif; margin: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+    .form-box { max-width: 400px; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px; }
+    .form-box input { width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
+    .inline-btn { display: inline; }
+  </style>
+</head>
+<body>
+  <p><a href="/">Back to Chat</a></p>
+
+  <div class="form-box">
+    <h3><%= editUser ? 'Edit User' : 'Add New User' %></h3>
+    <form action="<%= editUser ? '/api/users/update/' + editUser.id : '/api/users' %>" method="POST">
+      <input type="text" name="name" placeholder="Name" value="<%= editUser ? editUser.name : '' %>" required>
+      <input type="email" name="email" placeholder="Email" value="<%= editUser ? editUser.email : '' %>" required>
+      <input type="text" name="password" placeholder="Password" value="<%= editUser ? editUser.password : '' %>" required>
+      <button type="submit"><%= editUser ? 'Save Changes' : 'Create User' %></button>
+      <% if (editUser) { %> <a href="/users">Cancel</a> <% } %>
+    </form>
+  </div>
+
+  <h3>Users List</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Password</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach(u => { %>
+        <tr>
+          <td><%= u.id %></td>
+          <td><%= u.name %></td>
+          <td><%= u.email %></td>
+          <td><%= u.password %></td>
+          <td>
+            <a href="/users/edit/<%= u.id %>">Edit</a>
+            <form action="/api/users/delete/<%= u.id %>" method="POST" class="inline-btn" onsubmit="return confirm('Delete user?')">
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</body>
+</html>

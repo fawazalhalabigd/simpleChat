@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat Room</title>
+  <style>
+    body { font-family: sans-serif; margin: 30px; }
+    #chat-box { height: 350px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
+    .msg { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .msg-actions button { margin-left: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>Global Chat Room</h2>
+  <p><a href="/users">Manage Users</a></p>
+
+  <div id="chat-box">
+    <% messages.forEach(msg => { %>
+      <div class="msg" id="msg-<%= msg.id %>">
+        <div>
+          <strong><%= msg.username %>:</strong> <span><%= msg.text %></span>
+        </div>
+        <div class="msg-actions">
+          <button onclick="editMsg('<%= msg.id %>', '<%= msg.text %>')">Edit</button>
+          <button onclick="deleteMsg('<%= msg.id %>')">Delete</button>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <form id="msg-form">
+    <input type="text" id="username" placeholder="Your Name" required>
+    <input type="text" id="text" placeholder="Type a message..." required>
+    <button type="submit">Send</button>
+  </form>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const form = document.getElementById('msg-form');
+
+    // Create message
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const text = document.getElementById('text').value;
+
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, text })
+      });
+
+      document.getElementById('text').value = '';
+      fetchMessages();
+    });
+
+    // Read messages (Polling every 5 seconds)
+    async function fetchMessages() {
+      const res = await fetch('/api/messages');
+      const messages = await res.json();
+      
+      chatBox.innerHTML = messages.map(m => `
+        <div class="msg" id="msg-${m.id}">
+          <div>
+            <strong>${m.username}:</strong> <span>${m.text}</span>
+          </div>
+          <div class="msg-actions">
+            <button onclick="editMsg('${m.id}', '${m.text}')">Edit</button>
+            <button onclick="deleteMsg('${m.id}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Update message
+    async function editMsg(id, oldText) {
+      const newText = prompt('Edit message:', oldText);
+      if (!newText || newText === oldText) return;
+
+      await fetch('/api/messages/update/' + id, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newText })
+      });
+      fetchMessages();
+    }
+
+    // Delete message
+    async function deleteMsg(id) {
+      if (!confirm('Delete this message?')) return;
+
+      await fetch('/api/messages/delete/' + id, { method: 'POST' });
+      fetchMessages();
+    }
+
+    setInterval(fetchMessages, 5000);
+  </script>
+</body>
+</html>
