@@ -11,7 +11,20 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+// GET /api/messages (Last 10 minutes only)
+router.get('/getUpdated/massages', async (req, res) => {
+  try {
+    const query = `
+      SELECT * FROM messages 
+      WHERE created_at >= NOW() - INTERVAL 10 MINUTE 
+      ORDER BY created_at ASC
+    `;
+    const [messages] = await db.query(query);
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // POST /api/messages - Post message with password authentication
 router.post('/', async (req, res) => {
   const { username, password, text } = req.body;

@@ -4,7 +4,7 @@ const db = require('../db.js');
 
 router.get('/', async (req, res) => {
   try {
-    const [messages] = await db.query('SELECT * FROM messages ORDER BY created_at ASC');
+    const [messages] = await db.query('SELECT * FROM messages ORDER BY created_at ASC LIMIT 50');
     const [users] = await db.query('SELECT name FROM users ORDER BY name ASC');
     
     res.render('index', { messages, users });
